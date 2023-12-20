@@ -10,7 +10,14 @@ const int height = 10;
 int x, y, fruitX, fruitY, score;
 int tailX[100], tailY[100];
 int nTail;
-enum eDirection { STOP = 0, LEFT, RIGHT, UP, DOWN };
+enum eDirection
+{
+    STOP = 0,
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN
+};
 eDirection dir;
 
 char board[height][width];
@@ -84,16 +91,20 @@ void Input()
             switch (_getch())
             {
             case 75: // left arrow
-                dir = LEFT;
+                if (dir != RIGHT)
+                    dir = LEFT;
                 break;
             case 77: // right arrow
-                dir = RIGHT;
+                if (dir != LEFT)
+                    dir = RIGHT;
                 break;
             case 72: // up arrow
-                dir = UP;
+                if (dir != DOWN)
+                    dir = UP;
                 break;
             case 80: // down arrow
-                dir = DOWN;
+                if (dir != UP)
+                    dir = DOWN;
                 break;
             }
             break;
