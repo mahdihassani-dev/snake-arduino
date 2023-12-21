@@ -2,13 +2,13 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 
-const int width = 83;
-const int height = 47;
+const int width = 30;
+const int height = 20;
 
 bool gameover;
 int x, y, fruitX, fruitY, score;
 int tailX[100], tailY[100];
-int nTail = 10;
+int nTail = 4;
 enum eDirection {
   STOP = 0,
   LEFT,
@@ -22,6 +22,23 @@ char board[width][height];
 
 Adafruit_PCD8544 display = Adafruit_PCD8544(13, 11, 9, 10, 8);
 
+
+
+void draw() {
+
+  // Draw the snake
+  for (int i = 0; i < nTail; i++)
+    board[tailY[i]][tailX[i]] = '.';
+
+  // Draw the head
+  board[y][x] = '.';
+
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      display.print(board[i][j]);
+    }
+  }
+}
 
 
 void setup() {
@@ -42,23 +59,21 @@ void setup() {
   fruitX = rand() % width;
   fruitY = rand() % height;
   score = 0;
+
+  //test data
+  tailX[0] = x - 1;
+  tailX[1] = x - 2;
+  tailX[2] = x - 3;
+  tailX[3] = x - 4;
+
+  tailY[0] = y - 1;
+  tailY[1] = y - 2;
+  tailY[2] = y - 3;
+  tailY[3] = y - 4;
+  
 }
 void loop() {
-}
 
-void draw() {
+  draw();
 
-  // Draw the snake
-  for (int i = 0; i < nTail; i++)
-    board[tailY[i]][tailX[i]] = '.';
-
-  // Draw the head
-  board[y][x] = '.';
-
-  for (int i = 0; i < height; i++) {
-    for (int j = 0; j < width; j++) {
-      display.print(board[i][j]);
-    }
-    cout << endl;
-  }
 }
