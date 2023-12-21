@@ -183,5 +183,10 @@ int main()
         Algorithm();
         Sleep(50); // Delay adjusted to slow down the game
     }
+
+    system("cls");
+    std::cout << "Game Over!";
+    system("pause");
+
     return 0;
 }
