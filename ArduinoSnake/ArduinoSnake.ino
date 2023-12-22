@@ -35,7 +35,9 @@ void draw() {
 
   for (int i = 0; i < height; i++) {
     for (int j = 0; j < width; j++) {
+      display.setCursor(i, j);
       display.print(board[i][j]);
+      display.display()
     }
   }
 }
