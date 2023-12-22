@@ -1,81 +1,240 @@
-#include <SPI.h>
+// Тестировалось на Arduino IDE 1.0.1
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 
-const int width = 30;
-const int height = 20;
 
-bool gameover;
-int x, y, fruitX, fruitY, score;
-int tailX[100], tailY[100];
-int nTail = 4;
-enum eDirection {
-  STOP = 0,
-  LEFT,
-  RIGHT,
-  UP,
-  DOWN
-};
-eDirection dir;
+#define RESOLUTION 4
+#define MAXLEN 100
+#define UP 0
+#define DOWN 1
+#define LEFT 2
+#define RIGHT 3
 
-char board[width][height];
+#define DISP_HEIGHT 84
+#define DISP_WIDTH 48
 
+#define BUTTON 8
+
+
+char direction = RIGHT;
+bool game_over = false;
+
+char sensorPinX = A0;
+char sensorPinY = A1;
+char sensorValueX = 0;
+char sensorValueY = 0;
+char snakesize = 6;
+
+char snakex[MAXLEN];
+char snakey[MAXLEN];
+
+char foodx = -1;
+char foody = -1;
+
+// Nokia 5110 LCD
+// pin 3 - Serial clock out (SCLK)
+// pin 4 - Serial data out (DIN)
+// pin 5 - Data/Command select (D/C)
+// pin 6 - LCD chip select (CS)
+// pin 7 - LCD reset (RST)
 Adafruit_PCD8544 display = Adafruit_PCD8544(13, 11, 9, 10, 8);
 
 
+void setup() {
+  pinMode(BUTTON, INPUT_PULLUP);
 
-void draw() {
+  display.begin();          // Инициализация дисплея
+  display.setContrast(45);  // Устанавливаем контраст
+  //display.setTextColor(WHITE, BLACK);  // Устанавливаем цвет текста
+  display.setTextColor(BLACK, WHITE);  // Устанавливаем цвет текста
+  display.setTextSize(1);              // Устанавливаем размер текста
+  display.clearDisplay();              // Очищаем дисплей
+  delay(200);
+  display.drawRect(0, 0, 84, 46, BLACK);
+  display.setCursor(12, 18);
+  display.println("SNAKE GAME");
 
-  // Draw the snake
-  for (int i = 0; i < nTail; i++)
-    board[tailY[i]][tailX[i]] = '.';
+  display.display();
+  delay(200);
+  display.clearDisplay();
 
-  // Draw the head
-  board[y][x] = '.';
+  init_snake();
+}
 
-  for (int i = 0; i < height; i++) {
-    for (int j = 0; j < width; j++) {
-      display.setCursor(i, j);
-      display.print(board[i][j]);
-      display.display()
+void loop() {
+  if (game_over) {
+    display.clearDisplay();
+    display.display();
+    show_score();
+    while (digitalRead(BUTTON)) {
+      // while not pressed button, do nothing
+    }
+    display.clearDisplay();
+    display.display();
+    game_over = false;
+    snakesize = 6;
+    init_snake();
+  }
+
+  display.clearDisplay();
+  movesnake();
+  food();
+  snake();
+  display.display();
+}
+
+static void init_snake() {
+  for (char i = 0; i < MAXLEN; i++) {
+    snakex[i] = -2;
+    snakey[i] = -2;
+  }
+
+  for (char i = 0; i < snakesize; i++) {
+    snakex[i] = 11 - i;
+    snakey[i] = 5;
+  }
+
+  direction = RIGHT;
+
+  for (char i = 0; i <= 2; i++) {
+    snake();
+    display.display();
+    delay(350);
+    display.clearDisplay();
+    display.display();
+    delay(350);
+  }
+}
+
+static void show_score() {
+  display.setCursor(25, 10);
+  display.setTextSize(1);
+  int score = snakesize;
+  display.print("SCORE: ");
+  display.println(score);
+  display.println(" ");
+  display.print("press button");
+  display.display();
+}
+
+static void food() {
+  if (foodx < 0) {
+    foodx = random(0, DISP_HEIGHT / RESOLUTION);
+    foody = random(0, DISP_WIDTH / RESOLUTION);
+  }
+  display.drawCircle(foodx * RESOLUTION, foody * RESOLUTION, RESOLUTION / 2, BLACK);
+}
+
+static void snake() {
+
+  for (char i = 0; i < MAXLEN; i++) {
+    if (snakex[i] == -2) {
+      break;
+    }
+
+    if (i == 0) {
+      display.drawCircle(snakex[i] * RESOLUTION, snakey[i] * RESOLUTION, RESOLUTION / 2, BLACK);
+    } else {
+
+      if (snakex[0] == snakex[i] && snakey[0] == snakey[i]) {
+        game_over = true;
+      }
+
+      // filled body while not pressed. Low - btn not pressed. High - pressed.
+      if (digitalRead(BUTTON) == LOW) {
+        display.drawCircle(snakex[i] * RESOLUTION, snakey[i] * RESOLUTION, RESOLUTION / 2, BLACK);
+        //display.fillRect(snakex[i] * RESOLUTION, snakey[i] * RESOLUTION, RESOLUTION, RESOLUTION, BLACK);
+      } else {
+        display.fillCircle(snakex[i] * RESOLUTION, snakey[i] * RESOLUTION, RESOLUTION / 2, BLACK);
+      }
     }
   }
 }
 
+static void movesnake() {
+  char tmpx = snakex[0];
+  char tmpy = snakey[0];
 
-void setup() {
-  display.begin();
-  // init done
-  display.clearDisplay();
-  display.display();
-  display.setContrast(50);
+  char xdirection = getDirection(1);  // 1 - x
+  char ydirection = getDirection(2);  // 2 - y
 
-  // Draw a rectangle
-  display.drawRect(0, 0, 83, 47, BLACK);
-  display.display();
+  if (xdirection != 0) {
+    if (xdirection > 0 && direction != LEFT) {
+      direction = LEFT;
+    } else if (xdirection < 0 && direction != RIGHT) {
+      direction = RIGHT;
+    }
+  } else if (ydirection != 0) {
+    if (ydirection > 0 && direction != DOWN) {
+      direction = UP;
+    } else if (ydirection < 0 && direction != UP) {
+      direction = DOWN;
+    }
+  }
 
-  gameover = false;
-  dir = STOP;
-  x = width / 2;
-  y = height / 2;
-  fruitX = rand() % width;
-  fruitY = rand() % height;
-  score = 0;
+  switch (direction) {
+    case UP:
+      xdirection = 0;
+      ydirection = -1;
+      break;
+    case DOWN:
+      xdirection = 0;
+      ydirection = 1;
+      break;
+    case LEFT:
+      xdirection = -1;
+      ydirection = 0;
+      break;
+    case RIGHT:
+      xdirection = 1;
+      ydirection = 0;
+      break;
+  }
 
-  //test data
-  tailX[0] = x - 1;
-  tailX[1] = x - 2;
-  tailX[2] = x - 3;
-  tailX[3] = x - 4;
+  char prevx = tmpx + xdirection;
+  char prevy = tmpy + ydirection;
 
-  tailY[0] = y - 1;
-  tailY[1] = y - 2;
-  tailY[2] = y - 3;
-  tailY[3] = y - 4;
-  
+  if (prevx >= DISP_HEIGHT / RESOLUTION) {
+    prevx = 0;
+  } else if (prevx == -1) {
+    prevx = DISP_HEIGHT / RESOLUTION;
+  }
+  if (prevy >= DISP_WIDTH / RESOLUTION) {
+    prevy = 0;
+  } else if (prevy == -1) {
+    prevy = DISP_WIDTH / RESOLUTION;
+  }
+
+  for (char i = 0; i < MAXLEN; i++) {
+    if (i == 0) {
+      if (foodx == snakex[i] && foody == snakey[i]) {
+        if (snakesize < MAXLEN) {
+          snakex[snakesize] = 0;
+          snakey[snakesize] = 0;
+          snakesize++;
+        }
+
+        foodx = -1;
+      }
+    }
+    if (snakex[i] == -2 || (prevx == snakex[i] && prevy == snakey[i])) {
+      break;
+    }
+    tmpx = snakex[i];
+    tmpy = snakey[i];
+
+    snakex[i] = prevx;
+    snakey[i] = prevy;
+
+    prevx = tmpx;
+    prevy = tmpy;
+  }
 }
-void loop() {
 
-  draw();
-
+static char getDirection(char ax) {
+  char sensorPin = sensorPinY;
+  if (ax == 1) {
+    sensorPin = sensorPinX;
+  }
+  return map(analogRead(sensorPin), 0, 1024, -1, 2);
 }
