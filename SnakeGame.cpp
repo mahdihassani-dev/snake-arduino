@@ -42,10 +42,10 @@ void Draw()
 {
     // Draw the snake
     for (int i = 0; i < nTail; i++)
-        board[tailY[i]][tailX[i]] = 'o';
+        board[tailY[i]][tailX[i]] = '.';
 
     // Draw the head
-    board[y][x] = 'O';
+    board[y][x] = '.';
 
     // Draw the fruit
     board[fruitY][fruitX] = '@';
