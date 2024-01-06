@@ -1,7 +1,7 @@
 // Тестировалось на Arduino IDE 1.0.1
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
-
+#include <SPI.h>
 
 #define RESOLUTION 4
 #define MAXLEN 100
@@ -41,6 +41,7 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(13, 11, 9, 10, 8);
 
 
 void setup() {
+  Serial.begin(9600);
   pinMode(BUTTON, INPUT_PULLUP);
 
   display.begin();          // Инициализация дисплея
@@ -81,6 +82,7 @@ void loop() {
   food();
   snake();
   display.display();
+  delay(100);
 }
 
 static void init_snake() {
@@ -154,24 +156,24 @@ static void snake() {
 static void movesnake() {
   char tmpx = snakex[0];
   char tmpy = snakey[0];
+  input();
+//   char xdirection = getDirection(1);  // 1 - x
+//   char ydirection = getDirection(2);  // 2 - y
 
-  char xdirection = getDirection(1);  // 1 - x
-  char ydirection = getDirection(2);  // 2 - y
-
-  if (xdirection != 0) {
-    if (xdirection > 0 && direction != LEFT) {
-      direction = LEFT;
-    } else if (xdirection < 0 && direction != RIGHT) {
-      direction = RIGHT;
-    }
-  } else if (ydirection != 0) {
-    if (ydirection > 0 && direction != DOWN) {
-      direction = UP;
-    } else if (ydirection < 0 && direction != UP) {
-      direction = DOWN;
-    }
-  }
-
+//   if (xdirection != 0) {
+//     if (xdirection > 0 && direction != LEFT) {
+//       direction = LEFT;
+//     } else if (xdirection < 0 && direction != RIGHT) {
+//       direction = RIGHT;
+//     }
+//   } else if (ydirection != 0) {
+//     if (ydirection > 0 && direction != DOWN) {
+//       direction = UP;
+//     } else if (ydirection < 0 && direction != UP) {
+//       direction = DOWN;
+//     }
+//   }
+  int xdirection,ydirection;
   switch (direction) {
     case UP:
       xdirection = 0;
@@ -230,11 +232,35 @@ static void movesnake() {
     prevy = tmpy;
   }
 }
+//--------------------
+void input() {
 
-static char getDirection(char ax) {
-  char sensorPin = sensorPinY;
-  if (ax == 1) {
-    sensorPin = sensorPinX;
+  int xValue = analogRead(sensorPinX);
+  int yValue = analogRead(sensorPinY);
+  int mappedX = map(xValue, 0, 1023, -100, 100);
+  int mappedY = map(yValue, 0, 1023, -100, 100);
+
+  if (mappedY > 10) {  
+    if(direction!=DOWN)
+      direction=UP;
+  } else if (mappedY < -10) {
+    if(direction!=UP)
+        direction=DOWN;
+  } else if (mappedX > 10) {
+    if(direction!=LEFT)
+        direction=RIGHT;
+  } else if (mappedX < -10) {
+    if(direction!=RIGHT)
+        direction=LEFT;
   }
-  return map(analogRead(sensorPin), 0, 1024, -1, 2);
+
+
 }
+//--------------------
+// static char getDirection(char ax) {
+//   char sensorPin = sensorPinY;
+//   if (ax == 1) {
+//     sensorPin = sensorPinX;
+//   }
+//   return map(analogRead(sensorPin), 0, 1024, -1, 2);
+// }
