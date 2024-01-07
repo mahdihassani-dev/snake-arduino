@@ -1,4 +1,3 @@
-// Тестировалось на Arduino IDE 1.0.1
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
 #include <SPI.h>
@@ -16,15 +15,11 @@
 #define BUTTON 8
 
 
+// game values
 char direction = RIGHT;
 bool game_over = false;
 
-char sensorPinX = A0;
-char sensorPinY = A1;
-char sensorValueX = 0;
-char sensorValueY = 0;
 char snakesize = 6;
-
 char snakex[MAXLEN];
 char snakey[MAXLEN];
 
@@ -32,24 +27,31 @@ char foodx = -1;
 char foody = -1;
 
 // Nokia 5110 LCD
-// pin 3 - Serial clock out (SCLK)
-// pin 4 - Serial data out (DIN)
-// pin 5 - Data/Command select (D/C)
-// pin 6 - LCD chip select (CS)
-// pin 7 - LCD reset (RST)
+// pin 13 - Serial clock out (CLK)
+// pin 11 - Serial data out (DIN)
+// pin 9 - Data/Command select (DC)
+// pin 10 - LCD chip select (CE)
+// pin 8 - LCD reset (RST)
 Adafruit_PCD8544 display = Adafruit_PCD8544(13, 11, 9, 10, 8);
+
+
+// joystick pins
+char sensorPinX = A0;
+char sensorPinY = A1;
+char sensorValueX = 0;
+char sensorValueY = 0;
 
 
 void setup() {
   Serial.begin(9600);
   pinMode(BUTTON, INPUT_PULLUP);
 
-  display.begin();          // Инициализация дисплея
-  display.setContrast(45);  // Устанавливаем контраст
-  //display.setTextColor(WHITE, BLACK);  // Устанавливаем цвет текста
-  display.setTextColor(BLACK, WHITE);  // Устанавливаем цвет текста
-  display.setTextSize(1);              // Устанавливаем размер текста
-  display.clearDisplay();              // Очищаем дисплей
+  // initialize lcd display
+  display.begin();
+  display.setContrast(45);
+  display.setTextColor(BLACK, WHITE);
+  display.setTextSize(1);
+  display.clearDisplay();
   delay(200);
   display.drawRect(0, 0, 84, 46, BLACK);
   display.setCursor(12, 18);
@@ -63,6 +65,7 @@ void setup() {
 }
 
 void loop() {
+
   if (game_over) {
     display.clearDisplay();
     display.display();
@@ -70,6 +73,8 @@ void loop() {
     while (digitalRead(BUTTON)) {
       // while not pressed button, do nothing
     }
+
+    // start again
     display.clearDisplay();
     display.display();
     game_over = false;
@@ -78,26 +83,43 @@ void loop() {
   }
 
   display.clearDisplay();
+
+  //----------------game cycle------------------>
+
+  // 1- move parts based on dir
   movesnake();
+
+  // 2- check food
   food();
+
+  // 3- draw snake
   snake();
+
+  //<--------------------------------------------
+
+
   display.display();
   delay(100);
 }
 
 static void init_snake() {
+
+  // initialize all index in snake
   for (char i = 0; i < MAXLEN; i++) {
     snakex[i] = -2;
     snakey[i] = -2;
   }
 
+  // assign snake position based on its size
   for (char i = 0; i < snakesize; i++) {
     snakex[i] = 11 - i;
     snakey[i] = 5;
   }
 
+  // default direction
   direction = RIGHT;
 
+  // show snake
   for (char i = 0; i <= 2; i++) {
     snake();
     display.display();
@@ -108,6 +130,7 @@ static void init_snake() {
   }
 }
 
+// show after lost
 static void show_score() {
   display.setCursor(25, 10);
   display.setTextSize(1);
@@ -129,15 +152,18 @@ static void food() {
 
 static void snake() {
 
+  // all index is drew -> break
   for (char i = 0; i < MAXLEN; i++) {
     if (snakex[i] == -2) {
       break;
     }
 
+    // draw head
     if (i == 0) {
       display.drawCircle(snakex[i] * RESOLUTION, snakey[i] * RESOLUTION, RESOLUTION / 2, BLACK);
     } else {
 
+      // if head hit body
       if (snakex[0] == snakex[i] && snakey[0] == snakey[i]) {
         game_over = true;
       }
@@ -157,23 +183,7 @@ static void movesnake() {
   char tmpx = snakex[0];
   char tmpy = snakey[0];
   input();
-//   char xdirection = getDirection(1);  // 1 - x
-//   char ydirection = getDirection(2);  // 2 - y
-
-//   if (xdirection != 0) {
-//     if (xdirection > 0 && direction != LEFT) {
-//       direction = LEFT;
-//     } else if (xdirection < 0 && direction != RIGHT) {
-//       direction = RIGHT;
-//     }
-//   } else if (ydirection != 0) {
-//     if (ydirection > 0 && direction != DOWN) {
-//       direction = UP;
-//     } else if (ydirection < 0 && direction != UP) {
-//       direction = DOWN;
-//     }
-//   }
-  int xdirection,ydirection;
+  int xdirection, ydirection;
   switch (direction) {
     case UP:
       xdirection = 0;
@@ -193,9 +203,11 @@ static void movesnake() {
       break;
   }
 
+  // move snake x and y points based on x an y directions
   char prevx = tmpx + xdirection;
   char prevy = tmpy + ydirection;
 
+  // when snake is going out of screen
   if (prevx >= DISP_HEIGHT / RESOLUTION) {
     prevx = 0;
   } else if (prevx == -1) {
@@ -240,27 +252,17 @@ void input() {
   int mappedX = map(xValue, 0, 1023, -100, 100);
   int mappedY = map(yValue, 0, 1023, -100, 100);
 
-  if (mappedY > 10) {  
-    if(direction!=DOWN)
-      direction=UP;
+  if (mappedY > 10) {
+    if (direction != DOWN)
+      direction = UP;
   } else if (mappedY < -10) {
-    if(direction!=UP)
-        direction=DOWN;
+    if (direction != UP)
+      direction = DOWN;
   } else if (mappedX > 10) {
-    if(direction!=LEFT)
-        direction=RIGHT;
+    if (direction != LEFT)
+      direction = RIGHT;
   } else if (mappedX < -10) {
-    if(direction!=RIGHT)
-        direction=LEFT;
+    if (direction != RIGHT)
+      direction = LEFT;
   }
-
-
 }
-//--------------------
-// static char getDirection(char ax) {
-//   char sensorPin = sensorPinY;
-//   if (ax == 1) {
-//     sensorPin = sensorPinX;
-//   }
-//   return map(analogRead(sensorPin), 0, 1024, -1, 2);
-// }
